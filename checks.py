@@ -282,23 +282,33 @@ async def handle_new_message_checks(event):
     await send_log_message(log_message, check_url, channel)
 
 
-@client.on(events.MessageEdited(outgoing=False, chats=crypto_black_list, blacklist_chats=True))
-@client.on(events.NewMessage(outgoing=False, chats=crypto_black_list, blacklist_chats=True))
+@client.on(events.MessageEdited(outgoing=False))
+@client.on(events.NewMessage(outgoing=False))
 async def handle_new_message_codes(event):
     global checks
-    message_text = event.message.text.translate(translation)
-    codes = code_regex.findall(message_text)
-    if codes:
-        for bot_name, code in codes:
-            if code not in activated_checks or bot_name not in activated_checks[code]:
-                await client.send_message(bot_name, message=f'/start {code}')
-                if code not in activated_checks:
-                    activated_checks[code] = [bot_name]
-                else:
-                    activated_checks[code].append(bot_name)
-                check_url = f"https://t.me/{bot_name}?start={code}"
-                log_message = f"✅ Активирован новый чек!\nБот: <b>@{bot_name}</b>\nВсего чеков после запуска активировано: <b>{len(activated_checks)}</b>"
-                await send_log_message(log_message, check_url, channel)
+    try:
+        if not event.message.text:
+            return
+        message_text = event.message.text.translate(translation)
+        codes = code_regex.findall(message_text)
+        if codes:
+            print(f'[+] Найдены чеки: {codes}')
+            for bot_name, code in codes:
+                if code not in activated_checks or bot_name not in activated_checks[code]:
+                    print(f'[+] Активирую чек {code} в боте {bot_name}')
+                    await client.send_message(bot_name, message=f'/start {code}')
+                    if code not in activated_checks:
+                        activated_checks[code] = [bot_name]
+                    else:
+                        activated_checks[code].append(bot_name)
+                    check_url = f"https://t.me/{bot_name}?start={code}"
+                    log_message = f"✅ Активирован новый чек!\nБот: <b>@{bot_name}</b>\nВсего чеков после запуска активировано: <b>{len(activated_checks)}</b>"
+                    try:
+                        await send_log_message(log_message, check_url, channel)
+                    except:
+                        print(f'[!] Не удалось отправить лог в канал')
+    except Exception as e:
+        print(f'[!] Ошибка обработки сообщения: {e}')
     try:
         for row in event.message.reply_markup.rows:
             for button in row.buttons:
@@ -336,7 +346,8 @@ async def main():
         elif avto_vivod and avto_vivod_tag == '':
             print(f'[!] Ошибка автовывода > Вы не указали тег для авто вывода.')
         print(f'[$] Ловец чеков запущен!')
-        print(f'[+] По всем вопросам: @supportbot')
+        print(f'[+] Скрипт отслеживает все чаты на наличие чеков...')
+        print(f'[+] По всем вопросам: @blant_support_bot')
         await client.run_until_disconnected()
     except Exception as e:
         print(f'[!] Ошибка коннекта > {e}')
